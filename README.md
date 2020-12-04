@@ -11,4 +11,6 @@ In process is prefix SSID connect for Android 1->28 using nearby wifi scanning h
 
 ## Getting Started
 
-TODO
+The following permissions are necessary for versions of android before 29.
+ * ACCESS_WIFI_STATE
+ * CHANGE_WIFI_STATE

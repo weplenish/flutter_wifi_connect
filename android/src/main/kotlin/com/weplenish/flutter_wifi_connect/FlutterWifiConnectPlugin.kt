@@ -2,7 +2,10 @@ package com.weplenish.flutter_wifi_connect
 
 import android.annotation.SuppressLint
 import android.app.Activity
+import android.content.BroadcastReceiver
 import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
 import android.net.*
 import android.net.wifi.WifiConfiguration
 import android.net.wifi.WifiManager
@@ -28,7 +31,6 @@ class FlutterWifiConnectPlugin(private val activity: Activity) : FlutterPlugin, 
   // / This local reference serves to register the plugin with the Flutter Engine and unregister it
   // / when the Flutter Engine is detached from the Activity
   private lateinit var channel: MethodChannel
-  private var networkCallback: ConnectivityManager.NetworkCallback? = null
 
   private val connectivityManager: ConnectivityManager by lazy(LazyThreadSafetyMode.NONE) {
     activity.applicationContext.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
@@ -52,14 +54,17 @@ class FlutterWifiConnectPlugin(private val activity: Activity) : FlutterPlugin, 
       "connect" -> {
         val ssid = call.argument<String>("ssid")
         ssid?.let {
-          if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            val specifier = WifiNetworkSpecifier.Builder()
-                    .setSsid(it)
-                    .build()
-            connect(specifier, result)
-          } else {
-            val wifiConfig = createWifiConfig(it)
-            connect(wifiConfig, result)
+          when {
+              Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q -> {
+                val specifier = WifiNetworkSpecifier.Builder()
+                        .setSsid(it)
+                        .build()
+                connect(specifier, result)
+              }
+              else -> {
+                val wifiConfig = createWifiConfig(it)
+                connect(wifiConfig, result)
+              }
           }
         }
         return
@@ -67,17 +72,19 @@ class FlutterWifiConnectPlugin(private val activity: Activity) : FlutterPlugin, 
       "prefixConnect" -> {
         val ssid = call.argument<String>("ssid")
         ssid?.let {
-          if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            val specifier = WifiNetworkSpecifier.Builder()
-                    .setSsidPattern(PatternMatcher(it, PATTERN_PREFIX))
-                    .build()
-            connect(specifier, result)
-            return
-          }else{
-            val correctSSID = getClosestSSIDMatchingPrefix(it)
-            val wifiConfig = createWifiConfig(correctSSID)
-            connect(wifiConfig, result)
-            return
+          when {
+              Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q -> {
+                val specifier = WifiNetworkSpecifier.Builder()
+                        .setSsidPattern(PatternMatcher(it, PATTERN_PREFIX))
+                        .build()
+                connect(specifier, result)
+                return
+              }
+              else -> {
+                val wifiConfig = createWifiConfig(it)
+                connectByPrefix(it, wifiConfig, result)
+                return
+              }
           }
         }
         return
@@ -87,25 +94,27 @@ class FlutterWifiConnectPlugin(private val activity: Activity) : FlutterPlugin, 
         val password = call.argument<String>("password")
         val isWep = call.argument<Boolean>("isWep")
 
-        if(ssid != null && password != null && isWep != null){
-          if(isWep || Build.VERSION.SDK_INT < Build.VERSION_CODES.Q){
-            val wifiConfig = isWep.let {
-              if(it){
-                createWEPConfig(ssid, password)
-              }else{
-                createWifiConfig(ssid, password)
-              }
-            }
-            connect(wifiConfig, result)
-            return
-          }
-          val specifier = WifiNetworkSpecifier.Builder()
-                  .setSsid(ssid)
-                  .setWpa2Passphrase(password)
-                  .setWpa3Passphrase(password)
-                  .build()
-          connect(specifier, result)
+        if (ssid == null || password == null || isWep == null) {
+          return
         }
+
+        if(isWep || Build.VERSION.SDK_INT < Build.VERSION_CODES.Q){
+          val wifiConfig = isWep.let {
+            if(it){
+              createWEPConfig(ssid, password)
+            }else{
+              createWifiConfig(ssid, password)
+            }
+          }
+          connect(wifiConfig, result)
+          return
+        }
+        val specifier = WifiNetworkSpecifier.Builder()
+                .setSsid(ssid)
+                .setWpa2Passphrase(password)
+                .setWpa3Passphrase(password)
+                .build()
+        connect(specifier, result)
         return
       }
       "securePrefixConnect" -> {
@@ -113,26 +122,29 @@ class FlutterWifiConnectPlugin(private val activity: Activity) : FlutterPlugin, 
         val password = call.argument<String>("password")
         val isWep = call.argument<Boolean>("isWep")
 
-        if(ssid != null && password != null && isWep != null){
-          if(isWep || Build.VERSION.SDK_INT < Build.VERSION_CODES.Q){
-            val wifiConfig = isWep.let {
-              val correctSSID = getClosestSSIDMatchingPrefix(ssid)
-              if(it){
-                createWEPConfig(correctSSID, password)
-              }else{
-                createWifiConfig(correctSSID, password)
-              }
-            }
-            connect(wifiConfig, result)
-            return
-          }
-          val specifier = WifiNetworkSpecifier.Builder()
-                  .setSsidPattern(PatternMatcher(ssid, PATTERN_PREFIX))
-                  .setWpa2Passphrase(password)
-                  .setWpa3Passphrase(password)
-                  .build()
-          connect(specifier, result)
+        if (ssid == null || password == null || isWep == null) {
+          return
         }
+
+        if(isWep || Build.VERSION.SDK_INT < Build.VERSION_CODES.Q){
+          val wifiConfig = when {
+              isWep -> {
+                  createWEPConfig(ssid, password)
+              }
+              else -> {
+                  createWifiConfig(ssid, password)
+              }
+          }
+
+          connectByPrefix(ssid, wifiConfig, result)
+          return
+        }
+        val specifier = WifiNetworkSpecifier.Builder()
+                .setSsidPattern(PatternMatcher(ssid, PATTERN_PREFIX))
+                .setWpa2Passphrase(password)
+                .setWpa3Passphrase(password)
+                .build()
+        connect(specifier, result)
         return
       }
       else -> result.notImplemented()
@@ -143,9 +155,41 @@ class FlutterWifiConnectPlugin(private val activity: Activity) : FlutterPlugin, 
     channel.setMethodCallHandler(null)
   }
 
-  fun getClosestSSIDMatchingPrefix(@NonNull ssidPrefix: String): String{
-    //TODO: scan local networks pick closest with matching prefix
-    throw Error("Incomplete")
+  @SuppressLint("MissingPermission")
+  @Suppress("DEPRECATION")
+  fun connectByPrefix(@NonNull ssidPrefix: String, @NonNull config: WifiConfiguration, @NonNull result: Result){
+    val wifiScanReceiver = object : BroadcastReceiver() {
+      override fun onReceive(context: Context?, intent: Intent?) {
+        val ssid = getNearbySsid(ssidPrefix)
+        when {
+          ssid != null -> {
+            connect(config.apply {
+              SSID = "\"" + ssid + "\""
+            }, result)
+          }
+          else -> {
+            result.success(false)
+          }
+        }
+        activity.applicationContext.unregisterReceiver(this)
+      }
+    }
+
+    val intentFilter = IntentFilter()
+    intentFilter.addAction(WifiManager.SCAN_RESULTS_AVAILABLE_ACTION)
+    activity.applicationContext.registerReceiver(wifiScanReceiver, intentFilter)
+
+    val scanStarted = wifiManager.startScan()
+    if(!scanStarted){
+      wifiScanReceiver.onReceive(null, null)
+    }
+  }
+
+  @SuppressLint("MissingPermission")
+  fun getNearbySsid(@NonNull ssidPrefix: String): String?{
+    val results = wifiManager.scanResults
+    return results.filter { scanResult -> scanResult.SSID.startsWith(ssidPrefix) }
+            .maxBy { scanResult -> scanResult.level }?.SSID
   }
 
   @Suppress("DEPRECATION")
@@ -203,8 +247,20 @@ class FlutterWifiConnectPlugin(private val activity: Activity) : FlutterPlugin, 
     wifiManager.disconnect()
     wifiManager.enableNetwork(network, true)
     wifiManager.reconnect()
-    //TODO: test for network connection, maybe some listener
-    result.success(true)
+
+    val wifiChangeReceiver = object : BroadcastReceiver() {
+      override fun onReceive(context: Context, intent: Intent) {
+        val info = intent.getParcelableExtra<NetworkInfo>(WifiManager.EXTRA_NETWORK_INFO)
+        if(info != null && info.isConnected){
+          result.success(wifiManager.connectionInfo.ssid == wifiConfiguration.SSID)
+          activity.applicationContext.unregisterReceiver(this)
+        }
+      }
+    }
+
+    val intentFilter = IntentFilter()
+    intentFilter.addAction(WifiManager.NETWORK_STATE_CHANGED_ACTION)
+    activity.applicationContext.registerReceiver(wifiChangeReceiver, intentFilter)
   }
 
   @RequiresApi(Build.VERSION_CODES.Q)
@@ -215,22 +271,22 @@ class FlutterWifiConnectPlugin(private val activity: Activity) : FlutterPlugin, 
             .setNetworkSpecifier(specifier)
             .build()
 
-    networkCallback?.let { connectivityManager.unregisterNetworkCallback(it) }
-    networkCallback = object : ConnectivityManager.NetworkCallback() {
+    val networkCallback = object : ConnectivityManager.NetworkCallback() {
       override fun onAvailable(network: Network) {
         super.onAvailable(network)
         connectivityManager.bindProcessToNetwork(network)
         result.success(true)
+        connectivityManager.unregisterNetworkCallback(this)
       }
 
       override fun onUnavailable() {
         super.onUnavailable()
         result.success(false)
+        connectivityManager.unregisterNetworkCallback(this)
       }
     }
-    networkCallback?.let {
-      val handler = Handler(Looper.getMainLooper())
-      connectivityManager.requestNetwork(request, it, handler)
-    }
+
+    val handler = Handler(Looper.getMainLooper())
+    connectivityManager.requestNetwork(request, networkCallback, handler)
   }
 }
