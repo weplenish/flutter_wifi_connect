@@ -14,7 +14,7 @@ class MyApp extends StatefulWidget {
 }
 
 class _MyAppState extends State<MyApp> {
-  String _platformVersion = 'Unknown';
+  String _ssid = 'Unknown';
 
   @override
   void initState() {
@@ -24,12 +24,12 @@ class _MyAppState extends State<MyApp> {
 
   // Platform messages are asynchronous, so we initialize in an async method.
   Future<void> initPlatformState() async {
-    String platformVersion;
+    String ssid;
     // Platform messages may fail, so we use a try/catch PlatformException.
     try {
-      platformVersion = await FlutterWifiConnect.ssid;
+      ssid = await FlutterWifiConnect.ssid;
     } on PlatformException {
-      platformVersion = 'Failed to get platform version.';
+      ssid = 'Failed to get ssid';
     }
 
     // If the widget was removed from the tree while the asynchronous platform
@@ -38,7 +38,7 @@ class _MyAppState extends State<MyApp> {
     if (!mounted) return;
 
     setState(() {
-      _platformVersion = platformVersion;
+      _ssid = ssid;
     });
   }
 
@@ -50,7 +50,7 @@ class _MyAppState extends State<MyApp> {
           title: const Text('Plugin example app'),
         ),
         body: Center(
-          child: Text('Running on: $_platformVersion\n'),
+          child: Text('Network SSID: $_ssid\n'),
         ),
       ),
     );

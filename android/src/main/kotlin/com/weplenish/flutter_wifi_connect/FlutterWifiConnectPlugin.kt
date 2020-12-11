@@ -25,22 +25,24 @@ import io.flutter.plugin.common.MethodChannel.Result
 import java.lang.Error
 
 /** FlutterWifiConnectPlugin */
-class FlutterWifiConnectPlugin(private val activity: Activity) : FlutterPlugin, MethodCallHandler {
+class FlutterWifiConnectPlugin() : FlutterPlugin, MethodCallHandler {
   // / The MethodChannel that will the communication between Flutter and native Android
   // /
   // / This local reference serves to register the plugin with the Flutter Engine and unregister it
   // / when the Flutter Engine is detached from the Activity
   private lateinit var channel: MethodChannel
+  private lateinit var context: Context
 
   private val connectivityManager: ConnectivityManager by lazy(LazyThreadSafetyMode.NONE) {
-    activity.applicationContext.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+    context?.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
   }
 
   private val wifiManager: WifiManager by lazy(LazyThreadSafetyMode.NONE) {
-    activity.applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager
+    context?.getSystemService(Context.WIFI_SERVICE) as WifiManager
   }
 
   override fun onAttachedToEngine(@NonNull flutterPluginBinding: FlutterPlugin.FlutterPluginBinding) {
+    context = flutterPluginBinding.getApplicationContext()
     channel = MethodChannel(flutterPluginBinding.binaryMessenger, "flutter_wifi_connect")
     channel.setMethodCallHandler(this)
   }
@@ -171,13 +173,13 @@ class FlutterWifiConnectPlugin(private val activity: Activity) : FlutterPlugin, 
             result.success(false)
           }
         }
-        activity.applicationContext.unregisterReceiver(this)
+        context?.unregisterReceiver(this)
       }
     }
 
     val intentFilter = IntentFilter()
     intentFilter.addAction(WifiManager.SCAN_RESULTS_AVAILABLE_ACTION)
-    activity.applicationContext.registerReceiver(wifiScanReceiver, intentFilter)
+    context?.registerReceiver(wifiScanReceiver, intentFilter)
 
     val scanStarted = wifiManager.startScan()
     if(!scanStarted){
@@ -253,14 +255,14 @@ class FlutterWifiConnectPlugin(private val activity: Activity) : FlutterPlugin, 
         val info = intent.getParcelableExtra<NetworkInfo>(WifiManager.EXTRA_NETWORK_INFO)
         if(info != null && info.isConnected){
           result.success(wifiManager.connectionInfo.ssid == wifiConfiguration.SSID)
-          activity.applicationContext.unregisterReceiver(this)
+          context?.unregisterReceiver(this)
         }
       }
     }
 
     val intentFilter = IntentFilter()
     intentFilter.addAction(WifiManager.NETWORK_STATE_CHANGED_ACTION)
-    activity.applicationContext.registerReceiver(wifiChangeReceiver, intentFilter)
+    context?.registerReceiver(wifiChangeReceiver, intentFilter)
   }
 
   @RequiresApi(Build.VERSION_CODES.Q)

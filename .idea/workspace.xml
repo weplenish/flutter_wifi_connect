@@ -1,11 +1,18 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="ChangeListManager">
-    <list default="true" id="6dc270e1-9725-4eb0-ba40-bcd27e0d6432" name="Default Changelist" comment="" />
+    <list default="true" id="6dc270e1-9725-4eb0-ba40-bcd27e0d6432" name="Default Changelist" comment="">
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/android/src/main/kotlin/com/weplenish/flutter_wifi_connect/FlutterWifiConnectPlugin.kt" beforeDir="false" afterPath="$PROJECT_DIR$/android/src/main/kotlin/com/weplenish/flutter_wifi_connect/FlutterWifiConnectPlugin.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/example/lib/main.dart" beforeDir="false" afterPath="$PROJECT_DIR$/example/lib/main.dart" afterDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
     <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="Git.Settings">
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
   </component>
   <component name="ProjectId" id="1kw0MG8N8fC6JM8JOoTg9Aj8035" />
   <component name="ProjectViewState">
@@ -40,25 +47,33 @@
     <servers />
   </component>
   <component name="WindowStateProjectService">
-    <state x="95" y="15" key="#com.intellij.execution.impl.EditConfigurationsDialog" timestamp="1606596340914">
+    <state x="95" y="15" key="#com.intellij.execution.impl.EditConfigurationsDialog" timestamp="1607650086357">
       <screen x="0" y="0" width="1280" height="720" />
     </state>
-    <state x="95" y="15" key="#com.intellij.execution.impl.EditConfigurationsDialog/0.0.1280.720@0.0.1280.720" timestamp="1606596340914" />
-    <state width="1220" height="173" key="GridCell.Tab.0.bottom" timestamp="1606596881041">
+    <state x="95" y="15" key="#com.intellij.execution.impl.EditConfigurationsDialog/0.0.1280.720@0.0.1280.720" timestamp="1607650086357" />
+    <state x="421" y="115" key="FileChooserDialogImpl" timestamp="1607651342763">
       <screen x="0" y="0" width="1280" height="720" />
     </state>
-    <state width="1220" height="173" key="GridCell.Tab.0.bottom/0.0.1280.720@0.0.1280.720" timestamp="1606596881041" />
-    <state width="1220" height="173" key="GridCell.Tab.0.center" timestamp="1606596881041">
+    <state x="421" y="115" key="FileChooserDialogImpl/0.0.1280.720@0.0.1280.720" timestamp="1607651342763" />
+    <state width="1220" height="173" key="GridCell.Tab.0.bottom" timestamp="1607651344173">
       <screen x="0" y="0" width="1280" height="720" />
     </state>
-    <state width="1220" height="173" key="GridCell.Tab.0.center/0.0.1280.720@0.0.1280.720" timestamp="1606596881041" />
-    <state width="1220" height="173" key="GridCell.Tab.0.left" timestamp="1606596881041">
+    <state width="1220" height="173" key="GridCell.Tab.0.bottom/0.0.1280.720@0.0.1280.720" timestamp="1607651344173" />
+    <state width="1220" height="173" key="GridCell.Tab.0.center" timestamp="1607651344173">
       <screen x="0" y="0" width="1280" height="720" />
     </state>
-    <state width="1220" height="173" key="GridCell.Tab.0.left/0.0.1280.720@0.0.1280.720" timestamp="1606596881041" />
-    <state width="1220" height="173" key="GridCell.Tab.0.right" timestamp="1606596881041">
+    <state width="1220" height="173" key="GridCell.Tab.0.center/0.0.1280.720@0.0.1280.720" timestamp="1607651344173" />
+    <state width="1220" height="173" key="GridCell.Tab.0.left" timestamp="1607651344173">
       <screen x="0" y="0" width="1280" height="720" />
     </state>
-    <state width="1220" height="173" key="GridCell.Tab.0.right/0.0.1280.720@0.0.1280.720" timestamp="1606596881041" />
+    <state width="1220" height="173" key="GridCell.Tab.0.left/0.0.1280.720@0.0.1280.720" timestamp="1607651344173" />
+    <state width="1220" height="173" key="GridCell.Tab.0.right" timestamp="1607651344173">
+      <screen x="0" y="0" width="1280" height="720" />
+    </state>
+    <state width="1220" height="173" key="GridCell.Tab.0.right/0.0.1280.720@0.0.1280.720" timestamp="1607651344173" />
+    <state x="297" y="163" key="run.anything.popup" timestamp="1607651500251">
+      <screen x="0" y="0" width="1280" height="720" />
+    </state>
+    <state x="297" y="163" key="run.anything.popup/0.0.1280.720@0.0.1280.720" timestamp="1607651500251" />
   </component>
 </project>
