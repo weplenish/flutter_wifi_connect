@@ -1,3 +1,6 @@
+## 0.0.4
+* fix to iOS build issue
+
 ## 0.0.3
 
 * fix to build correctly using new flutter plugin methods
