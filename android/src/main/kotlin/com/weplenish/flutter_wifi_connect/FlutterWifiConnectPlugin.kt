@@ -50,6 +50,12 @@ class FlutterWifiConnectPlugin() : FlutterPlugin, MethodCallHandler {
   override fun onMethodCall(@NonNull call: MethodCall, @NonNull result: Result) {
     when (call.method) {
       "disconnect" -> {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
+          disconnect(result)
+          return
+        }
+        // TOOD implment disconnect with remove suggestion (API >= 29)
+        return
       }
       "getSSID" -> {
       }
@@ -291,5 +297,25 @@ class FlutterWifiConnectPlugin() : FlutterPlugin, MethodCallHandler {
 
     val handler = Handler(Looper.getMainLooper())
     connectivityManager.requestNetwork(request, networkCallback, handler)
+  }
+
+  @SuppressLint("MissingPermission")
+  @Suppress("DEPRECATION")
+  fun disconnect(@NonNull result: Result){
+    wifiManager.disconnect()
+
+    val wifiChangeReceiver = object : BroadcastReceiver() {
+      override fun onReceive(context: Context, intent: Intent) {
+        val info = intent.getParcelableExtra<NetworkInfo>(WifiManager.EXTRA_NETWORK_INFO)
+        if(info != null && !info.isConnected){
+          result.success(true)
+          context?.unregisterReceiver(this)
+        }
+      }
+    }
+
+    val intentFilter = IntentFilter()
+    intentFilter.addAction(WifiManager.NETWORK_STATE_CHANGED_ACTION)
+    context?.registerReceiver(wifiChangeReceiver, intentFilter)
   }
 }
