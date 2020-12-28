@@ -254,7 +254,8 @@ class FlutterWifiConnectPlugin() : FlutterPlugin, MethodCallHandler {
       override fun onReceive(context: Context, intent: Intent) {
         val info = intent.getParcelableExtra<NetworkInfo>(WifiManager.EXTRA_NETWORK_INFO)
         if(info != null && info.isConnected){
-          result.success(wifiManager.connectionInfo.ssid == wifiConfiguration.SSID)
+          // wifiManager.connectionInfo.ssid returns <unkown ssid> if location permission is not given
+          result.success(wifiManager.connectionInfo.ssid == wifiConfiguration.SSID || info.getExtraInfo() == wifiConfiguration.SSID)
           context?.unregisterReceiver(this)
         }
       }
