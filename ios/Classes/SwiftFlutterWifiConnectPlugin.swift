@@ -90,13 +90,20 @@ public class SwiftFlutterWifiConnectPlugin: NSObject, FlutterPlugin {
   @available(iOS 11, *)
   private func connect(hotspotConfig: NEHotspotConfiguration, result: @escaping FlutterResult) -> Void {
     NEHotspotConfigurationManager.shared.apply(hotspotConfig) { [weak self] (error) in
-      if error != nil {
-        if (error?.localizedDescription == "already associated.") {
+
+      if let error = error as NSError? {
+        switch(error.code) {
+        case NEHotspotConfigurationError.alreadyAssociated.rawValue:
             result(true)
-          } else {
+            break
+        case NEHotspotConfigurationError.userDenied.rawValue:
             result(false)
-          }
-          return
+            break
+        default:
+            result(false)
+            break
+        }
+        return
       }
       guard let this = self else {
         result(false)
