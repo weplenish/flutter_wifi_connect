@@ -1,6 +1,7 @@
 import Flutter
 import UIKit
 import NetworkExtension
+import SystemConfiguration.CaptiveNetwork
 
 public class SwiftFlutterWifiConnectPlugin: NSObject, FlutterPlugin {
   public static func register(with registrar: FlutterPluginRegistrar) {
@@ -10,53 +11,67 @@ public class SwiftFlutterWifiConnectPlugin: NSObject, FlutterPlugin {
   }
 
   public func handle(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
-    switch (call.method) {
-      case "disconnect":
-        result(disconnect())
-        return
-
-      case "getSSID":
-        result(getSSID())
-        return
-
-      case "connect":
-        let args = GetArgs(call.arguments)
-        let hotspotConfig = NEHotspotConfiguration.init(ssid: args["ssid"] as! String)
-        hotspotConfig.joinOnce = !(args["saveNetwork"] as! Bool);
-        result(connect(hotspotConfig, result))
-        return
-
-      case "prefixConnect":
-        guard #available(iOS 13.0, *) else {
-          result(FlutterError(code: "iOS must be above 13", message: "Prefix connect doesn't work on iOS pre 13", details: nil))
+    do {
+      switch (call.method) {
+        case "disconnect":
+          result(disconnect())
           return
-        }
-        let args = GetArgs(call.arguments)
-        let hotspotConfig = NEHotspotConfiguration.init(ssidPrefix: args["ssid"] as! String)
-        hotspotConfig.joinOnce = !(args["saveNetwork"] as! Bool);
-        result(connect(hotspotConfig, result))
-        return
 
-      case "secureConnect":
-        let args = GetArgs(call.arguments)
-        let hotspotConfig = NEHotspotConfiguration.init(ssid: args["ssid"] as! String, passphrase: args["password"] as! String, isWEP: args["isWep"] as! Bool)
-        hotspotConfig.joinOnce = !(args["saveNetwork"] as! Bool);
-        result(connect(hotspotConfig, result))
-        return
-
-      case "securePrefixConnect":
-        guard #available(iOS 13.0, *) else {
-          result(FlutterError(code: "iOS must be above 13", message: "Prefix connect doesn't work on iOS pre 13", details: nil))
+        case "getSSID":
+          result(getSSID())
           return
-        }
-        let args = GetArgs(call.arguments)
-        let hotspotConfig = NEHotspotConfiguration.init(ssidPrefix: args["ssid"] as! String, passphrase: args["password"] as! String, isWEP: args["isWep"] as! Bool)
-        hotspotConfig.joinOnce = !(args["saveNetwork"] as! Bool);
-        result(connect(hotspotConfig, result))
-        return
 
-      default:
-        result(FlutterMethodNotImplemented)
+        case "connect":
+          let args = try GetArgs(arguments: call.arguments)
+          let hotspotConfig = NEHotspotConfiguration.init(ssid: args["ssid"] as! String)
+          hotspotConfig.joinOnce = !(args["saveNetwork"] as! Bool);
+          connect(hotspotConfig: hotspotConfig, result: result)
+          return
+
+        case "prefixConnect":
+          guard #available(iOS 13.0, *) else {
+            result(FlutterError(code: "iOS must be above 13", message: "Prefix connect doesn't work on iOS pre 13", details: nil))
+            return
+          }
+          let args = try GetArgs(arguments: call.arguments)
+          let hotspotConfig = NEHotspotConfiguration.init(ssidPrefix: args["ssid"] as! String)
+          hotspotConfig.joinOnce = !(args["saveNetwork"] as! Bool);
+          connect(hotspotConfig: hotspotConfig, result: result)
+          return
+
+        case "secureConnect":
+          let args = try GetArgs(arguments: call.arguments)
+          let hotspotConfig = NEHotspotConfiguration.init(ssid: args["ssid"] as! String, passphrase: args["password"] as! String, isWEP: args["isWep"] as! Bool)
+          hotspotConfig.joinOnce = !(args["saveNetwork"] as! Bool);
+          connect(hotspotConfig: hotspotConfig, result: result)
+          return
+
+        case "securePrefixConnect":
+          guard #available(iOS 13.0, *) else {
+            result(FlutterError(code: "iOS must be above 13", message: "Prefix connect doesn't work on iOS pre 13", details: nil))
+            return
+          }
+          let args = try GetArgs(arguments: call.arguments)
+          let hotspotConfig = NEHotspotConfiguration.init(ssidPrefix: args["ssid"] as! String, passphrase: args["password"] as! String, isWEP: args["isWep"] as! Bool)
+          hotspotConfig.joinOnce = !(args["saveNetwork"] as! Bool);
+          connect(hotspotConfig: hotspotConfig, result: result)
+          return
+
+        default:
+          result(FlutterMethodNotImplemented)
+          return
+      }
+    } catch ArgsError.MissingArgs {
+        result(
+          FlutterError( code: "missingArgs", 
+            message: "Missing args",
+            details: "Missing args."))
+        return
+    } catch {
+        result(
+          FlutterError( code: "unknownError", 
+            message: "Unkown iOS error",
+            details: error))
         return
     }
   }
@@ -73,22 +88,29 @@ public class SwiftFlutterWifiConnectPlugin: NSObject, FlutterPlugin {
   }
 
   @available(iOS 11, *)
-  private func connect(hotspotConfig: NEHotspotConfiguration, result: @escaping FlutterResult) -> Bool {
+  private func connect(hotspotConfig: NEHotspotConfiguration, result: @escaping FlutterResult) -> Void {
     NEHotspotConfigurationManager.shared.apply(hotspotConfig) { [weak self] (error) in
-      if error != nil {
-        if (error?.localizedDescription == "already associated.") {
+
+      if let error = error as NSError? {
+        switch(error.code) {
+        case NEHotspotConfigurationError.alreadyAssociated.rawValue:
             result(true)
-          } else {
+            break
+        case NEHotspotConfigurationError.userDenied.rawValue:
             result(false)
-          }
-          return
+            break
+        default:
+            result(false)
+            break
+        }
+        return
       }
       guard let this = self else {
         result(false)
         return
       }
       if let currentSsid = this.getSSID() {
-        result(currentSsid.hasPrefix(ssid))
+        result(currentSsid.hasPrefix(hotspotConfig.ssid))
         return
       }
       result(false)
