@@ -33,6 +33,9 @@ class FlutterWifiConnectPlugin() : FlutterPlugin, MethodCallHandler {
   private lateinit var channel: MethodChannel
   private lateinit var context: Context
 
+  // holds the call while connected using ConnectivityManager.requestNetwork API
+  private var networkCallback: ConnectivityManager.NetworkCallback? = null
+
   private val connectivityManager: ConnectivityManager by lazy(LazyThreadSafetyMode.NONE) {
     context?.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
   }
@@ -52,10 +55,18 @@ class FlutterWifiConnectPlugin() : FlutterPlugin, MethodCallHandler {
       "disconnect" -> {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
           disconnect(result)
-          return
+        } else {
+          // API >= 29
+          if (this.networkCallback != null) {
+            // Android disconnects as soon as the callback is unregistered
+            connectivityManager.unregisterNetworkCallback(this.networkCallback)
+            connectivityManager.bindProcessToNetwork(null)
+            this.networkCallback = null
+            result.success(true)
+          } else {
+            result.success(false)
+          }
         }
-        // TOOD implment disconnect with remove suggestion (API >= 29)
-        return
       }
       "getSSID" -> {
       }
@@ -286,18 +297,23 @@ class FlutterWifiConnectPlugin() : FlutterPlugin, MethodCallHandler {
 
   @RequiresApi(Build.VERSION_CODES.Q)
   fun connect(@NonNull specifier: WifiNetworkSpecifier, @NonNull result: Result){
+    if (this.networkCallback != null) {
+      // there was already a connection, unregister to disconnect before proceeding
+      connectivityManager.unregisterNetworkCallback(this.networkCallback)
+    }
     val request = NetworkRequest.Builder()
             .addTransportType(NetworkCapabilities.TRANSPORT_WIFI)
             .removeCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
             .setNetworkSpecifier(specifier)
             .build()
 
-    val networkCallback = object : ConnectivityManager.NetworkCallback() {
+    this.networkCallback = object : ConnectivityManager.NetworkCallback() {
       override fun onAvailable(network: Network) {
         super.onAvailable(network)
         connectivityManager.bindProcessToNetwork(network)
         result.success(true)
-        connectivityManager.unregisterNetworkCallback(this)
+        // callback will be unregistered when disconnect is called
+        // cannot unregister callback here since it would disconnect form the network
       }
 
       override fun onUnavailable() {
