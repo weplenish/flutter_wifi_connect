@@ -33,6 +33,9 @@ class FlutterWifiConnectPlugin() : FlutterPlugin, MethodCallHandler {
   private lateinit var channel: MethodChannel
   private lateinit var context: Context
 
+  // holds the call while connected using ConnectivityManager.requestNetwork API
+  private var networkCallback: ConnectivityManager.NetworkCallback? = null
+
   private val connectivityManager: ConnectivityManager by lazy(LazyThreadSafetyMode.NONE) {
     context?.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
   }
@@ -50,6 +53,20 @@ class FlutterWifiConnectPlugin() : FlutterPlugin, MethodCallHandler {
   override fun onMethodCall(@NonNull call: MethodCall, @NonNull result: Result) {
     when (call.method) {
       "disconnect" -> {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
+          disconnect(result)
+        } else {
+          // API >= 29
+          if (this.networkCallback != null) {
+            // Android disconnects as soon as the callback is unregistered
+            connectivityManager.unregisterNetworkCallback(this.networkCallback)
+            connectivityManager.bindProcessToNetwork(null)
+            this.networkCallback = null
+            result.success(true)
+          } else {
+            result.success(false)
+          }
+        }
       }
       "getSSID" -> {
       }
@@ -57,16 +74,16 @@ class FlutterWifiConnectPlugin() : FlutterPlugin, MethodCallHandler {
         val ssid = call.argument<String>("ssid")
         ssid?.let {
           when {
-              Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q -> {
-                val specifier = WifiNetworkSpecifier.Builder()
-                        .setSsid(it)
-                        .build()
-                connect(specifier, result)
-              }
-              else -> {
-                val wifiConfig = createWifiConfig(it)
-                connect(wifiConfig, result)
-              }
+            Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q -> {
+              val specifier = WifiNetworkSpecifier.Builder()
+                      .setSsid(it)
+                      .build()
+              connect(specifier, result)
+            }
+            else -> {
+              val wifiConfig = createWifiConfig(it)
+              connect(wifiConfig, result)
+            }
           }
         }
         return
@@ -75,18 +92,18 @@ class FlutterWifiConnectPlugin() : FlutterPlugin, MethodCallHandler {
         val ssid = call.argument<String>("ssid")
         ssid?.let {
           when {
-              Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q -> {
-                val specifier = WifiNetworkSpecifier.Builder()
-                        .setSsidPattern(PatternMatcher(it, PATTERN_PREFIX))
-                        .build()
-                connect(specifier, result)
-                return
-              }
-              else -> {
-                val wifiConfig = createWifiConfig(it)
-                connectByPrefix(it, wifiConfig, result)
-                return
-              }
+            Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q -> {
+              val specifier = WifiNetworkSpecifier.Builder()
+                      .setSsidPattern(PatternMatcher(it, PATTERN_PREFIX))
+                      .build()
+              connect(specifier, result)
+              return
+            }
+            else -> {
+              val wifiConfig = createWifiConfig(it)
+              connectByPrefix(it, wifiConfig, result)
+              return
+            }
           }
         }
         return
@@ -95,6 +112,7 @@ class FlutterWifiConnectPlugin() : FlutterPlugin, MethodCallHandler {
         val ssid = call.argument<String>("ssid")
         val password = call.argument<String>("password")
         val isWep = call.argument<Boolean>("isWep")
+        val isWpa3 = call.argument<Boolean>("isWpa3")
 
         if (ssid == null || password == null || isWep == null) {
           return
@@ -113,8 +131,13 @@ class FlutterWifiConnectPlugin() : FlutterPlugin, MethodCallHandler {
         }
         val specifier = WifiNetworkSpecifier.Builder()
                 .setSsid(ssid)
-                .setWpa2Passphrase(password)
-                .setWpa3Passphrase(password)
+                .apply {
+                  if (isWpa3 != null && isWpa3) {
+                    setWpa3Passphrase(password)
+                  } else {
+                    setWpa2Passphrase(password)
+                  }
+                }
                 .build()
         connect(specifier, result)
         return
@@ -123,6 +146,7 @@ class FlutterWifiConnectPlugin() : FlutterPlugin, MethodCallHandler {
         val ssid = call.argument<String>("ssid")
         val password = call.argument<String>("password")
         val isWep = call.argument<Boolean>("isWep")
+        val isWpa3 = call.argument<Boolean>("isWpa3")
 
         if (ssid == null || password == null || isWep == null) {
           return
@@ -130,12 +154,12 @@ class FlutterWifiConnectPlugin() : FlutterPlugin, MethodCallHandler {
 
         if(isWep || Build.VERSION.SDK_INT < Build.VERSION_CODES.Q){
           val wifiConfig = when {
-              isWep -> {
-                  createWEPConfig(ssid, password)
-              }
-              else -> {
-                  createWifiConfig(ssid, password)
-              }
+            isWep -> {
+              createWEPConfig(ssid, password)
+            }
+            else -> {
+              createWifiConfig(ssid, password)
+            }
           }
 
           connectByPrefix(ssid, wifiConfig, result)
@@ -143,8 +167,13 @@ class FlutterWifiConnectPlugin() : FlutterPlugin, MethodCallHandler {
         }
         val specifier = WifiNetworkSpecifier.Builder()
                 .setSsidPattern(PatternMatcher(ssid, PATTERN_PREFIX))
-                .setWpa2Passphrase(password)
-                .setWpa3Passphrase(password)
+                .apply {
+                  if (isWpa3 != null && isWpa3) {
+                    setWpa3Passphrase(password)
+                  } else {
+                    setWpa2Passphrase(password)
+                  }
+                }
                 .build()
         connect(specifier, result)
         return
@@ -254,7 +283,8 @@ class FlutterWifiConnectPlugin() : FlutterPlugin, MethodCallHandler {
       override fun onReceive(context: Context, intent: Intent) {
         val info = intent.getParcelableExtra<NetworkInfo>(WifiManager.EXTRA_NETWORK_INFO)
         if(info != null && info.isConnected){
-          result.success(wifiManager.connectionInfo.ssid == wifiConfiguration.SSID)
+          // wifiManager.connectionInfo.ssid returns <unkown ssid> if location permission is not given
+          result.success(wifiManager.connectionInfo.ssid == wifiConfiguration.SSID || info.getExtraInfo() == wifiConfiguration.SSID)
           context?.unregisterReceiver(this)
         }
       }
@@ -267,18 +297,23 @@ class FlutterWifiConnectPlugin() : FlutterPlugin, MethodCallHandler {
 
   @RequiresApi(Build.VERSION_CODES.Q)
   fun connect(@NonNull specifier: WifiNetworkSpecifier, @NonNull result: Result){
+    if (this.networkCallback != null) {
+      // there was already a connection, unregister to disconnect before proceeding
+      connectivityManager.unregisterNetworkCallback(this.networkCallback)
+    }
     val request = NetworkRequest.Builder()
             .addTransportType(NetworkCapabilities.TRANSPORT_WIFI)
             .removeCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
             .setNetworkSpecifier(specifier)
             .build()
 
-    val networkCallback = object : ConnectivityManager.NetworkCallback() {
+    this.networkCallback = object : ConnectivityManager.NetworkCallback() {
       override fun onAvailable(network: Network) {
         super.onAvailable(network)
         connectivityManager.bindProcessToNetwork(network)
         result.success(true)
-        connectivityManager.unregisterNetworkCallback(this)
+        // callback will be unregistered when disconnect is called
+        // cannot unregister callback here since it would disconnect form the network
       }
 
       override fun onUnavailable() {
@@ -290,5 +325,25 @@ class FlutterWifiConnectPlugin() : FlutterPlugin, MethodCallHandler {
 
     val handler = Handler(Looper.getMainLooper())
     connectivityManager.requestNetwork(request, networkCallback, handler)
+  }
+
+  @SuppressLint("MissingPermission")
+  @Suppress("DEPRECATION")
+  fun disconnect(@NonNull result: Result){
+    wifiManager.disconnect()
+
+    val wifiChangeReceiver = object : BroadcastReceiver() {
+      override fun onReceive(context: Context, intent: Intent) {
+        val info = intent.getParcelableExtra<NetworkInfo>(WifiManager.EXTRA_NETWORK_INFO)
+        if(info != null && !info.isConnected){
+          result.success(true)
+          context?.unregisterReceiver(this)
+        }
+      }
+    }
+
+    val intentFilter = IntentFilter()
+    intentFilter.addAction(WifiManager.NETWORK_STATE_CHANGED_ACTION)
+    context?.registerReceiver(wifiChangeReceiver, intentFilter)
   }
 }
