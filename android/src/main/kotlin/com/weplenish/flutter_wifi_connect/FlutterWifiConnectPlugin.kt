@@ -63,16 +63,16 @@ class FlutterWifiConnectPlugin() : FlutterPlugin, MethodCallHandler {
         val ssid = call.argument<String>("ssid")
         ssid?.let {
           when {
-              Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q -> {
-                val specifier = WifiNetworkSpecifier.Builder()
-                        .setSsid(it)
-                        .build()
-                connect(specifier, result)
-              }
-              else -> {
-                val wifiConfig = createWifiConfig(it)
-                connect(wifiConfig, result)
-              }
+            Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q -> {
+              val specifier = WifiNetworkSpecifier.Builder()
+                      .setSsid(it)
+                      .build()
+              connect(specifier, result)
+            }
+            else -> {
+              val wifiConfig = createWifiConfig(it)
+              connect(wifiConfig, result)
+            }
           }
         }
         return
@@ -81,18 +81,18 @@ class FlutterWifiConnectPlugin() : FlutterPlugin, MethodCallHandler {
         val ssid = call.argument<String>("ssid")
         ssid?.let {
           when {
-              Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q -> {
-                val specifier = WifiNetworkSpecifier.Builder()
-                        .setSsidPattern(PatternMatcher(it, PATTERN_PREFIX))
-                        .build()
-                connect(specifier, result)
-                return
-              }
-              else -> {
-                val wifiConfig = createWifiConfig(it)
-                connectByPrefix(it, wifiConfig, result)
-                return
-              }
+            Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q -> {
+              val specifier = WifiNetworkSpecifier.Builder()
+                      .setSsidPattern(PatternMatcher(it, PATTERN_PREFIX))
+                      .build()
+              connect(specifier, result)
+              return
+            }
+            else -> {
+              val wifiConfig = createWifiConfig(it)
+              connectByPrefix(it, wifiConfig, result)
+              return
+            }
           }
         }
         return
@@ -101,6 +101,7 @@ class FlutterWifiConnectPlugin() : FlutterPlugin, MethodCallHandler {
         val ssid = call.argument<String>("ssid")
         val password = call.argument<String>("password")
         val isWep = call.argument<Boolean>("isWep")
+        val isWpa3 = call.argument<Boolean>("isWpa3")
 
         if (ssid == null || password == null || isWep == null) {
           return
@@ -119,8 +120,13 @@ class FlutterWifiConnectPlugin() : FlutterPlugin, MethodCallHandler {
         }
         val specifier = WifiNetworkSpecifier.Builder()
                 .setSsid(ssid)
-                .setWpa2Passphrase(password)
-                .setWpa3Passphrase(password)
+                .apply {
+                  if (isWpa3 != null && isWpa3) {
+                    setWpa3Passphrase(password)
+                  } else {
+                    setWpa2Passphrase(password)
+                  }
+                }
                 .build()
         connect(specifier, result)
         return
@@ -129,6 +135,7 @@ class FlutterWifiConnectPlugin() : FlutterPlugin, MethodCallHandler {
         val ssid = call.argument<String>("ssid")
         val password = call.argument<String>("password")
         val isWep = call.argument<Boolean>("isWep")
+        val isWpa3 = call.argument<Boolean>("isWpa3")
 
         if (ssid == null || password == null || isWep == null) {
           return
@@ -136,12 +143,12 @@ class FlutterWifiConnectPlugin() : FlutterPlugin, MethodCallHandler {
 
         if(isWep || Build.VERSION.SDK_INT < Build.VERSION_CODES.Q){
           val wifiConfig = when {
-              isWep -> {
-                  createWEPConfig(ssid, password)
-              }
-              else -> {
-                  createWifiConfig(ssid, password)
-              }
+            isWep -> {
+              createWEPConfig(ssid, password)
+            }
+            else -> {
+              createWifiConfig(ssid, password)
+            }
           }
 
           connectByPrefix(ssid, wifiConfig, result)
@@ -149,8 +156,13 @@ class FlutterWifiConnectPlugin() : FlutterPlugin, MethodCallHandler {
         }
         val specifier = WifiNetworkSpecifier.Builder()
                 .setSsidPattern(PatternMatcher(ssid, PATTERN_PREFIX))
-                .setWpa2Passphrase(password)
-                .setWpa3Passphrase(password)
+                .apply {
+                  if (isWpa3 != null && isWpa3) {
+                    setWpa3Passphrase(password)
+                  } else {
+                    setWpa2Passphrase(password)
+                  }
+                }
                 .build()
         connect(specifier, result)
         return
