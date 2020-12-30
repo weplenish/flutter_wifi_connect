@@ -1,3 +1,8 @@
+## 0.0.6
+
+- moved android Q+ disconnect to its own parameterless method
+- implemented get SSID for android
+
 ## 0.0.5
 
 - fix to ios build issue
