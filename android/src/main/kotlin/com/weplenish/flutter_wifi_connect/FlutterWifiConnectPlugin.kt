@@ -36,6 +36,9 @@ class FlutterWifiConnectPlugin() : FlutterPlugin, MethodCallHandler {
   // holds the call while connected using ConnectivityManager.requestNetwork API
   private var networkCallback: ConnectivityManager.NetworkCallback? = null
 
+  // holds the network id returned by WifiManager.addNetwork, required to disconnect (API < 29)
+  private var networkId: Int? = null
+
   private val connectivityManager: ConnectivityManager by lazy(LazyThreadSafetyMode.NONE) {
     context?.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
   }
@@ -52,7 +55,7 @@ class FlutterWifiConnectPlugin() : FlutterPlugin, MethodCallHandler {
 
   override fun onMethodCall(@NonNull call: MethodCall, @NonNull result: Result) {
     when (call.method) {
-      "disconnect" && Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q -> {
+      "disconnect" -> {
         when {
           Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q -> {
             result.success(disconnect())
@@ -274,15 +277,26 @@ class FlutterWifiConnectPlugin() : FlutterPlugin, MethodCallHandler {
   @SuppressLint("MissingPermission")
   fun connect(@NonNull wifiConfiguration: WifiConfiguration, @NonNull result: Result){
     val network = wifiManager.addNetwork(wifiConfiguration)
+    if (network == -1) {
+      result.success(false)
+      return
+    }
     wifiManager.saveConfiguration()
-    wifiManager.disconnect()
 
     val wifiChangeReceiver = object : BroadcastReceiver() {
+      var count = 0
       override fun onReceive(context: Context, intent: Intent) {
+        count++;
         val info = intent.getParcelableExtra<NetworkInfo>(WifiManager.EXTRA_NETWORK_INFO)
-        if(info != null && info.isConnected){
-          result.success(info.extraInfo == wifiConfiguration.SSID || getSSID() == wifiConfiguration.SSID)
-          context?.unregisterReceiver(this)
+        if(info != null && info.isConnected) {
+          if (info.extraInfo == wifiConfiguration.SSID || getSSID() == wifiConfiguration.SSID) {
+            result.success(true)
+            context?.unregisterReceiver(this)
+          } else if (count > 1) {
+            // Ignore first callback if not success. It may be for the already connected SSID
+            result.success(false)
+            context?.unregisterReceiver(this)
+          }
         }
       }
     }
@@ -290,9 +304,10 @@ class FlutterWifiConnectPlugin() : FlutterPlugin, MethodCallHandler {
     val intentFilter = IntentFilter()
     intentFilter.addAction(WifiManager.NETWORK_STATE_CHANGED_ACTION)
     context?.registerReceiver(wifiChangeReceiver, intentFilter)
-    
+
+    // enable the new network and attempt to connect to it 
     wifiManager.enableNetwork(network, true)
-    wifiManager.reconnect()
+    networkId = network
   }
 
   @RequiresApi(Build.VERSION_CODES.Q)
@@ -342,6 +357,11 @@ class FlutterWifiConnectPlugin() : FlutterPlugin, MethodCallHandler {
   @SuppressLint("MissingPermission")
   @Suppress("DEPRECATION")
   fun disconnect(@NonNull result: Result){
+    val network = networkId
+    if (network == null) {
+      result.success(false)
+      return
+    }
     val wifiChangeReceiver = object : BroadcastReceiver() {
       override fun onReceive(context: Context, intent: Intent) {
         val info = intent.getParcelableExtra<NetworkInfo>(WifiManager.EXTRA_NETWORK_INFO)
@@ -355,8 +375,10 @@ class FlutterWifiConnectPlugin() : FlutterPlugin, MethodCallHandler {
     val intentFilter = IntentFilter()
     intentFilter.addAction(WifiManager.NETWORK_STATE_CHANGED_ACTION)
     context?.registerReceiver(wifiChangeReceiver, intentFilter)
-
-    wifiManager.disconnect()
+    // remove network to emulate a behavior as close as possible to new Android API
+    wifiManager.removeNetwork(network)
+    wifiManager.reconnect()
+    networkId = null
   }
 
   @SuppressLint("MissingPermission")
