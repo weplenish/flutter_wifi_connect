@@ -1,3 +1,7 @@
+## 0.0.7
+
+- android improvements for disconnection
+
 ## 0.0.6
 
 - moved android Q+ disconnect to its own parameterless method
