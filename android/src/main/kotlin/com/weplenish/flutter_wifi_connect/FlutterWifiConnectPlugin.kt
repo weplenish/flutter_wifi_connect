@@ -314,7 +314,7 @@ class FlutterWifiConnectPlugin() : FlutterPlugin, MethodCallHandler {
   fun connect(@NonNull specifier: WifiNetworkSpecifier, @NonNull result: Result){
     if (this.networkCallback != null) {
       // there was already a connection, unregister to disconnect before proceeding
-      connectivityManager.unregisterNetworkCallback(this.networkCallback)
+      connectivityManager.unregisterNetworkCallback(this.networkCallback!!)
     }
     val request = NetworkRequest.Builder()
             .addTransportType(NetworkCapabilities.TRANSPORT_WIFI)
@@ -338,7 +338,7 @@ class FlutterWifiConnectPlugin() : FlutterPlugin, MethodCallHandler {
     }
 
     val handler = Handler(Looper.getMainLooper())
-    connectivityManager.requestNetwork(request, networkCallback, handler)
+    connectivityManager.requestNetwork(request, networkCallback!!, handler)
   }
 
   @RequiresApi(Build.VERSION_CODES.Q)
@@ -347,7 +347,7 @@ class FlutterWifiConnectPlugin() : FlutterPlugin, MethodCallHandler {
       return false
     }
     
-    connectivityManager.unregisterNetworkCallback(this.networkCallback)
+    connectivityManager.unregisterNetworkCallback(this.networkCallback!!)
     connectivityManager.bindProcessToNetwork(null)
     this.networkCallback = null
 
