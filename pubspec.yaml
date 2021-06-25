@@ -1,11 +1,11 @@
 name: flutter_wifi_connect
 description: A low dependency flutter plugin to allow simple connection to wifi devices with the provided ssid or ssid prefix. Built for Android 10+ (API 29) and iOS 13+.
-version: 0.0.7
+version: 0.0.8
 homepage: https://github.com/weplenish/flutter_wifi_connect
 repository: https://github.com/weplenish/flutter_wifi_connect
 
 environment:
-  sdk: ">=2.7.0 <3.0.0"
+  sdk: ">=2.12.13 <3.0.0"
   flutter: ">=1.20.0"
 
 dependencies:
