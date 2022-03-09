@@ -32,17 +32,17 @@ class FlutterWifiConnect {
 
   /// The [connect] method attempts to connect to wifi
   /// matching explicitly the [ssid] parameter.
-  static Future<bool> connect(String ssid, {bool saveNetwork = false}) async {
-    final bool connected = await _channel.invokeMethod<bool>(
+  static Future<bool?> connect(String ssid, {bool saveNetwork = false}) async {
+    final bool? connected = await _channel.invokeMethod<bool>(
         'connect', {'ssid': ssid, 'saveNetwork': saveNetwork});
     return connected;
   }
 
   /// The [connectByPrefix] method attempts to connect to the nearest wifi
   /// network with the ssid prefix matching the [ssidPrefix] parameter.
-  static Future<bool> connectByPrefix(String ssidPrefix,
+  static Future<bool?> connectByPrefix(String ssidPrefix,
       {bool saveNetwork = false}) async {
-    final bool connected = await _channel.invokeMethod<bool>(
+    final bool? connected = await _channel.invokeMethod<bool>(
         'prefixConnect', {'ssid': ssidPrefix, 'saveNetwork': saveNetwork});
     return connected;
   }
@@ -51,11 +51,11 @@ class FlutterWifiConnect {
   /// matching explicitly the [ssid] parameter. This will fail if the
   /// [password] doesn't match or the [isWep] parameter isn't set correctly.
   /// Android does not support WEP Networks.
-  static Future<bool> connectToSecureNetwork(String ssid, String password,
+  static Future<bool?> connectToSecureNetwork(String ssid, String password,
       {bool isWep = false,
       bool isWpa3 = false,
       bool saveNetwork = false}) async {
-    final bool connected = await _channel.invokeMethod<bool>('secureConnect', {
+    final bool? connected = await _channel.invokeMethod<bool>('secureConnect', {
       'ssid': ssid,
       'password': password,
       'saveNetwork': saveNetwork,
@@ -69,12 +69,12 @@ class FlutterWifiConnect {
   /// wifi network with the ssid prefix matching the [ssidPrefix] parameter.
   /// This will fail if the [password] doesn't match or the [isWep] parameter
   /// isn't set correctly. Android does not support WEP Networks.
-  static Future<bool> connectToSecureNetworkByPrefix(
+  static Future<bool?> connectToSecureNetworkByPrefix(
       String ssidPrefix, String password,
       {bool isWep = false,
       bool isWpa3 = false,
       bool saveNetwork = false}) async {
-    final bool connected =
+    final bool? connected =
         await _channel.invokeMethod<bool>('securePrefixConnect', {
       'ssid': ssidPrefix,
       'password': password,
@@ -87,7 +87,7 @@ class FlutterWifiConnect {
 
   /// The [disconnect] method disconnects from the wifi network if the network
   /// was connected to using one of the [connect] methods.
-  static Future<bool> disconnect() => _channel.invokeMethod('disconnect');
+  static Future<bool?> disconnect() => _channel.invokeMethod('disconnect');
 
   /// register wifi network
   static Future register() async {}
@@ -96,8 +96,8 @@ class FlutterWifiConnect {
   static Future unregister() async {}
 
   /// The [ssid] getter returns the currently connected ssid.
-  static Future<String> get ssid async {
-    final String ssid = await _channel.invokeMethod<String>('getSSID');
+  static Future<String?> get ssid async {
+    final String? ssid = await _channel.invokeMethod<String>('getSSID');
     return ssid;
   }
 }
