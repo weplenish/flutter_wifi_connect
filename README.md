@@ -25,6 +25,7 @@ These must be added in xcode
 #### Android
 
 Make sure you verify permissions during runtime (using a permission plugin). [In Android it looks like this](https://developers.google.com/android/guides/permissions)
+System location should be enabled and location permission for app needs to be asked at runtime.
 
 ##### 29+ (Android Q+)
 

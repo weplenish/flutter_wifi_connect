@@ -224,7 +224,7 @@ class FlutterWifiConnectPlugin() : FlutterPlugin, MethodCallHandler {
   fun getNearbySsid(@NonNull ssidPrefix: String): String?{
     val results = wifiManager.scanResults
     return results.filter { scanResult -> scanResult.SSID.startsWith(ssidPrefix) }
-            .maxBy { scanResult -> scanResult.level }?.SSID
+            .maxByOrNull { scanResult -> scanResult.level }?.SSID
   }
 
   @Suppress("DEPRECATION")
