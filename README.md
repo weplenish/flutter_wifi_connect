@@ -1,5 +1,9 @@
 # flutter_wifi_connect
 
+## deprecated
+Thanks for all the support, we've handed the reigns over to [plugin_wifi_connect](https://pub.dev/packages/plugin_wifi_connect)
+
+## Description
 A low dependency flutter plugin to allow simple connection to wifi devices with the provided ssid or ssid prefix. Built for Android 10+ (API 29) and iOS 11+.
 
 This plugin is made with the latest / greatest direct connect to wifi options. It's intent is to make it easy to programmatically connect to devices that broadcast unique SSIDs. Items like IOT devices.
